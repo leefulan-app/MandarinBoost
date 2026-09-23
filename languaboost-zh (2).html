@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MandarinBoost</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.85em%22 font-size=%2280%22>字</text></svg>">
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3/dist/hanzi-writer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pinyin-pro"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<style>
+  :root{
+    --paper:#DCE4EA;
+    --paper-soft:#EBF0F4;
+    --ink:#26333D;
+    --muted:#66757F;
+    --rule:#BFCCD6;
+    --es:#B8722C;
+    --es-soft:#E9DABF;
+    --pl:#8F3E3E;
+    --pl-soft:#E3D0CD;
+    --shadow: 0 1px 0 rgba(35,38,43,0.06);
+    --radius: 14px;
+    --transition: 320ms cubic-bezier(.4,0,.2,1);
+  }
+  body.evening{
+    --paper:#38404B;
+    --paper-soft:#454E5A;
+    --ink:#EDF0F3;
+    --muted:#AEB6BF;
+    --rule:#565F6B;
+    --es:#D99A54;
+    --es-soft:#463C2E;
+    --pl:#CC7A7A;
+    --pl-soft:#463536;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+    transition: background var(--transition), color var(--transition);
+  }
+  .wrap{max-width:640px;margin:0 auto;padding:20px 18px 80px;}
+  header{padding:6px 0 18px;}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  h1#app-title{
+    font-family:'Fraunces',serif;
+    font-optical-sizing:auto;
+    font-weight:700;
+    font-size:38px;
+    margin:4px 0 10px;
+    letter-spacing:-0.01em;
+  }
+  h1#app-title .jp{font-size:0.62em;font-weight:600;color:var(--muted);margin-left:6px;}
+  .date-row{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .date-text{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:19px;
+    font-weight:600;
+    color:var(--ink);
+  }
+  .lang-badge{
+    padding:2px 10px;
+    border-radius:20px;
+    background:var(--paper-soft);
+    border:1.5px solid var(--rule);
+  }
+  .lang-badge.es{color:var(--es);border-color:var(--es);}
+  .lang-badge.zh{color:var(--es);border-color:var(--es);}
+  .lang-badge.pl{color:var(--pl);border-color:var(--pl);}
+
+  .auth-box{
+    background:var(--paper-soft);
+    border:1.5px solid var(--rule);
+    border-radius:10px;
+    padding:14px;
+    margin-bottom:14px;
+  }
+  .auth-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+  .auth-row input{
+    flex:1;min-width:140px;
+    background:var(--paper);border:1.5px solid var(--rule);border-radius:8px;
+    font-family:'Inter',sans-serif;
+    font-size:13.5px;color:var(--ink);
+    padding:8px 10px;
+    outline:none;
+  }
+  .auth-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .sync-status{font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--muted);white-space:nowrap;}
+  .sync-status.ok{color:#3E8E5A;}
+  .sync-status.err{color:var(--pl);}
+  .signed-in-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+  .tts-row{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .tts-row select{
+    background:var(--paper-soft);border:1.5px solid var(--rule);border-radius:8px;
+    padding:6px 8px;font-size:12.5px;color:var(--ink);font-family:'IBM Plex Mono',monospace;
+  }
+  .spk-btn{
+    display:inline-flex;align-items:center;gap:3px;
+    background:none;border:1px solid var(--rule);border-radius:20px;
+    padding:2px 8px;font-size:12px;cursor:pointer;color:var(--ink);
+    margin-left:6px;vertical-align:middle;
+  }
+
+  .lang-picker{display:flex;gap:8px;margin:14px 0 6px;}
+  .lang-btn{
+    flex:1;
+    border:1.5px solid var(--rule);
+    background:var(--paper-soft);
+    color:var(--ink);
+    padding:10px 8px;
+    border-radius:10px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+    transition: all var(--transition);
+    display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .lang-btn[data-lang="es"].active{border-color:var(--es);background:var(--es-soft);}
+  .lang-btn[data-lang="pl"].active{border-color:var(--pl);background:var(--pl-soft);}
+  .lang-btn .dot.es{background:var(--es);}
+  .lang-btn .dot.pl{background:var(--pl);}
+
+  .tabs{display:flex;gap:6px;border-bottom:1.5px solid var(--rule);margin-bottom:18px;overflow-x:auto;}
+  .tab{
+    padding:9px 12px;
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--muted);
+    cursor:pointer;
+    border-bottom:2.5px solid transparent;
+    white-space:nowrap;
+    transition: all var(--transition);
+  }
+  .tab.active{color:var(--ink);border-bottom-color: var(--current-accent, var(--ink));}
+
+  .panel{display:none;}
+  .panel.active{display:block; animation: fadeIn 240ms ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin:14px 0 6px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:0.06em;}
+  input[type=date], input[type=url], textarea{
+    width:100%;
+    background:var(--paper-soft);
+    border:1.5px solid var(--rule);
+    border-radius:10px;
+    padding:10px 12px;
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    font-size:14.5px;
+    resize:vertical;
+  }
+  textarea{min-height:110px; line-height:1.6;}
+  .hint{font-size:12px;color:var(--muted);margin-top:5px;}
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--ink);color:var(--paper);
+    border:none;border-radius:10px;
+    padding:11px 18px;
+    font-weight:600;font-size:14px;
+    cursor:pointer;
+    margin-top:16px;
+    transition: transform 150ms ease, opacity 150ms ease;
+  }
+  .btn:active{transform:scale(0.97);}
+  .btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--rule);}
+  .btn.small{padding:7px 12px;font-size:12.5px;margin-top:0;}
+
+  .empty{
+    border:1.5px dashed var(--rule);
+    border-radius:var(--radius);
+    padding:28px 18px;
+    text-align:center;
+    color:var(--muted);
+    font-size:14px;
+  }
+
+  /* Ticket stub - signature element for review queue */
+  .ticket{
+    position:relative;
+    display:flex;
+    background:var(--paper-soft);
+    border:1.5px solid var(--rule);
+    border-radius:12px;
+    margin-bottom:14px;
+    overflow:hidden;
+  }
+  .ticket-main{flex:1;padding:14px 16px;}
+  .ticket-stub{
+    width:64px;
+    flex-shrink:0;
+    border-left:2px dashed var(--rule);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    position:relative;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--muted);
+    gap:2px;
+  }
+  .ticket-stub::before,.ticket-stub::after{
+    content:'';
+    position:absolute;
+    width:16px;height:16px;
+    background:var(--paper);
+    border-radius:50%;
+    left:-9px;
+  }
+  .ticket-stub::before{top:-8px;}
+  .ticket-stub::after{bottom:-8px;}
+  .ticket-date{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;}
+  .ticket-gap{font-size:11px;color:var(--muted);margin-top:2px;}
+  .ticket-top{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+  .ticket-lang-tag{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    padding:2px 7px;
+    border-radius:20px;
+    font-weight:600;
+  }
+  .ticket-lang-tag.es{background:var(--es-soft);color:var(--es);}
+  .ticket-lang-tag.pl{background:var(--pl-soft);color:var(--pl);}
+  .ticket-body{display:none;margin-top:12px;border-top:1px solid var(--rule);padding-top:12px;}
+  .ticket.open .ticket-body{display:block;}
+  .ticket-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+
+  .toggle-row{display:flex;gap:8px;margin-bottom:10px;}
+  .toggle-btn{
+    flex:1;
+    border:1.5px solid var(--rule);
+    background:transparent;
+    color:var(--muted);
+    padding:7px 6px;
+    border-radius:8px;
+    font-size:12.5px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .toggle-btn.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+
+  .sentence-row{
+    padding:10px 0;
+    border-bottom:1px solid var(--rule);
+  }
+  .sentence-row:last-child{border-bottom:none;}
+  .fx{font-size:14.5px;line-height:1.55;}
+  .zh{font-size:14px;line-height:1.55;color:var(--muted);margin-top:3px;}
+  .reveal-btn{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    color: var(--current-accent, var(--muted));
+    background:none;border:none;cursor:pointer;
+    padding:4px 0;text-decoration:underline;
+  }
+  .row-actions{display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;}
+  .mic-result{margin-top:6px;font-size:13.5px;line-height:1.6;display:none;}
+  .mic-result .said{color:var(--muted);font-size:12.5px;}
+  .mic-result .diffline{margin-top:3px;font-size:14.5px;}
+  .mic-result .miss{color:var(--pl);text-decoration:underline;text-decoration-color:var(--pl);}
+  .mic-result .score{font-size:11.5px;color:var(--muted);margin-top:3px;font-family:'IBM Plex Mono',monospace;}
+
+  audio{width:100%;margin-top:10px;}
+  .stat-line{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);margin:10px 0 4px;}
+  .mini-link{
+    margin-left:8px;font-size:11px;font-weight:600;background:none;border:none;
+    color:var(--muted);text-decoration:underline;cursor:pointer;padding:0;
+    text-transform:none;letter-spacing:0;font-family:'Inter',sans-serif;
+  }
+
+  .hanzi-char{cursor:pointer;border-bottom:1.5px dotted var(--muted);border-radius:2px;}
+  .hanzi-char rt{
+    font-size:0.52em;font-weight:600;color:var(--muted);
+    font-family:'IBM Plex Mono',monospace;user-select:none;
+  }
+  .hanzi-char{ruby-align:center;}
+  body.hide-pinyin .hanzi-char rt{visibility:hidden;}
+  .pinyin-toggle-row{display:flex;align-items:center;gap:8px;margin:8px 0;}
+  .batch-row{
+    display:flex;justify-content:space-between;align-items:center;gap:8px;
+    padding:8px 10px;border:1.5px solid var(--rule);border-radius:8px;margin-top:6px;
+    font-size:13px;
+  }
+  .batch-row.overwrite{border-color:var(--pl);}
+  .batch-tag{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+  .batch-tag.overwrite{color:var(--pl);}
+  .hanzi-char:hover{background:var(--paper-soft);}
+  .stroke-modal{
+    display:none;position:fixed;inset:0;background:rgba(20,22,26,0.55);
+    align-items:center;justify-content:center;z-index:999;padding:20px;
+  }
+  .stroke-card{
+    background:var(--paper);border-radius:16px;padding:20px;max-width:300px;width:100%;
+    box-shadow:0 12px 40px rgba(0,0,0,0.35);
+  }
+  .stroke-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .stroke-char-label{font-family:'Fraunces',serif;font-size:30px;font-weight:700;}
+  .stroke-canvas-wrap{display:flex;justify-content:center;margin:8px 0 14px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="app-title">MandarinBoost</h1>
+    <div class="date-row">
+      <span id="today-title" class="date-text">—</span>
+      <span id="today-lang-badge" class="date-text lang-badge">—</span>
+    </div>
+
+    <div class="auth-box" id="login-box">
+      <div class="auth-row">
+        <input id="auth-email" type="email" placeholder="Email" autocomplete="username">
+        <input id="auth-password" type="password" placeholder="密碼" data-i18n-ph="phPassword" autocomplete="current-password">
+      </div>
+      <div class="auth-actions">
+        <button class="btn small" onclick="doSignIn()" data-i18n="loginBtn">登入</button>
+        <span class="sync-status" id="sync-status" data-i18n="notSignedIn">未登入</span>
+      </div>
+    </div>
+    <div class="auth-box" id="signed-in-box" style="display:none;">
+      <div class="signed-in-bar">
+        <span class="sync-status" id="signed-in-status">已登入</span>
+        <button class="btn small ghost" onclick="doSignOut()" data-i18n="logoutBtn">登出</button>
+      </div>
+    </div>
+
+    <div class="pinyin-toggle-row">
+      <button class="btn small ghost" id="pinyin-toggle-btn" onclick="togglePinyinDisplay()">👁️ 隱藏拼音</button>
+      <button class="btn small ghost" id="lang-toggle-btn" onclick="setUILang(uiLang==='zh'?'en':'zh')">EN</button>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" data-panel="upload" onclick="showTab('upload')" data-i18n="tabUpload">新增內容</div>
+    <div class="tab" data-panel="morning" onclick="showTab('morning')" data-i18n="tabMorning">早上・盲聽</div>
+    <div class="tab" data-panel="evening" onclick="showTab('evening')" data-i18n="tabEvening">晚上・練習</div>
+    <div class="tab" data-panel="review" onclick="showTab('review')" data-i18n="tabReview">複習</div>
+  </div>
+
+  <!-- UPLOAD -->
+  <div class="panel active" id="panel-upload">
+    <label data-i18n="labelDate">日期</label>
+    <input type="date" id="in-date" onchange="onDateChange()">
+
+    <div class="hint" id="edit-hint" style="display:none;"></div>
+
+    <label data-i18n="labelHanzi">漢字內容</label> <button type="button" class="mini-link" id="btn-translate-toNotes" onclick="autoTranslate('toNotes', this)" data-i18n="btnAutoTranslate">→ 自動翻成英文筆記</button>
+    <textarea id="in-foreign" placeholder="今天天氣很好。&#10;我們去公園散步吧。" data-i18n-ph="phHanzi"></textarea>
+
+    <label data-i18n="labelPinyin">拼音</label> <button type="button" class="mini-link" id="btn-gen-pinyin" onclick="generatePinyinDraft()" data-i18n="btnGenPinyin">→ 產生拼音</button>
+    <textarea id="in-pinyin" placeholder="按上面「產生拼音」自動帶出來，或自己輸入" data-i18n-ph="phPinyin"></textarea>
+    <div class="hint" id="pinyin-msg"></div>
+
+    <label data-i18n="labelNotes">筆記／翻譯</label>
+    <textarea id="in-zh" placeholder="The weather is very nice today.&#10;Let's go for a walk in the park." data-i18n-ph="phNotes"></textarea>
+
+    <label data-i18n="labelAudio">音檔連結</label>
+    <input type="url" id="in-audio" placeholder="https://example.com/audio/0830.mp3">
+
+    <button class="btn" onclick="saveEntry()" data-i18n="btnSave">儲存</button>
+    <div class="hint" id="upload-msg"></div>
+
+    <div style="margin-top:28px; border-top:1.5px solid var(--rule); padding-top:16px;">
+      <label data-i18n="labelBatch">批次匯入</label>
+      <div class="hint">
+        <span data-i18n-html="batchHint">表格欄位：<b>日期、漢字、拼音（可留空自動產生）、筆記</b>。同一天有好幾句，就用同一個日期重複列出好幾列。</span>
+        <button type="button" class="mini-link" onclick="downloadBatchTemplate()" data-i18n="btnDownloadTemplate">下載範本檔</button>
+      </div>
+      <input type="file" id="batch-file" accept=".csv,.xlsx,.xls" style="margin-top:8px;">
+      <button class="btn ghost small" style="margin-top:8px;" onclick="parseBatchFile()" data-i18n="btnParseBatch">解析檔案</button>
+      <div class="hint" id="batch-msg"></div>
+      <div id="batch-preview"></div>
+    </div>
+  </div>
+
+  <!-- MORNING -->
+  <div class="panel" id="panel-morning">
+    <div id="morning-content"></div>
+  </div>
+
+  <!-- EVENING -->
+  <div class="panel" id="panel-evening">
+    <div id="evening-content"></div>
+  </div>
+
+  <!-- REVIEW -->
+  <div class="panel" id="panel-review">
+    <div class="stat-line" id="review-stat"></div>
+    <div id="review-list"></div>
+  </div>
+
+</div>
+
+<div id="stroke-modal" class="stroke-modal" onclick="if(event.target===this) closeStrokeModal();">
+  <div class="stroke-card">
+    <div class="stroke-header">
+      <span id="stroke-modal-char" class="stroke-char-label"></span>
+      <button class="btn small ghost" onclick="closeStrokeModal()" data-i18n="strokeClose">✕ 關閉</button>
+    </div>
+    <div id="stroke-target" class="stroke-canvas-wrap"></div>
+    <button class="btn small" onclick="replayStroke()" data-i18n="strokeReplay">▶ 重播筆順</button>
+  </div>
+</div>
+
+<script>
+// ===== 請填入你自己的 Firebase 設定（Firebase 主控台 → 專案設定 → 一般 → 你的應用程式）=====
+const firebaseConfig = {
+  apiKey: "AIzaSyACtSczmKJhI1sxWItS-N7XfMMRwYHqaeU",
+  authDomain: "mandarinboost-8c8c4.firebaseapp.com",
+  projectId: "mandarinboost-8c8c4",
+  storageBucket: "mandarinboost-8c8c4.firebasestorage.app",
+  messagingSenderId: "504099233570",
+  appId: "1:504099233570:web:79100fdf6998d8989f0f7b"
+};
+// ================================================================================
+
+// ===== 介面語言（中／英切換，不影響你自己輸入的教材內容）=====
+let uiLang = localStorage.getItem('uiLang') || 'zh';
+const STR = {
+  zh: {
+    loginBtn:'登入', logoutBtn:'登出', notSignedIn:'未登入',
+    tabUpload:'新增內容', tabMorning:'早上・盲聽', tabEvening:'晚上・練習', tabReview:'複習',
+    labelDate:'日期', labelHanzi:'漢字內容', labelPinyin:'拼音', labelNotes:'筆記／翻譯', labelAudio:'音檔連結', labelBatch:'批次匯入',
+    phPassword:'密碼', phHanzi:'今天天氣很好。\n我們去公園散步吧。', phPinyin:'按上面「產生拼音」自動帶出來，或自己輸入', phNotes:"The weather is very nice today.\nLet's go for a walk in the park.",
+    btnAutoTranslate:'→ 自動翻成英文筆記', btnGenPinyin:'→ 產生拼音', btnSave:'儲存',
+    batchHint:'表格欄位：<b>日期、漢字、拼音（可留空自動產生）、筆記</b>。同一天有好幾句，就用同一個日期重複列出好幾列。',
+    btnDownloadTemplate:'下載範本檔', btnParseBatch:'解析檔案', btnConfirmImport:'確認匯入',
+    hidePinyin:'👁️ 隱藏拼音', showPinyin:'👁️ 顯示拼音',
+    langChinese:'中文',
+    loadedForEdit:'已載入 {date}（{lang}）現有內容，可以直接編輯後存檔覆蓋。',
+    needOneField:'漢字或筆記至少要填一邊喔。',
+    savedEntry:'已儲存 {date}（{lang}），共 {n} 句 {note}',
+    lineMismatchNote:'（漢字、筆記行數不同，已按各自內容對齊儲存，可能有幾句對不準，建議之後檢查一下）',
+    needHanziForPinyin:'請先輸入漢字內容。',
+    pinyinLibFail:'拼音套件載入失敗，檢查網路連線。',
+    pinyinGenerated:'已自動產生拼音，多音字（例如：行、重、了…）容易猜錯，請檢查一下、需要的話直接手動修改。',
+    hanziFieldEmpty:'漢字欄位是空的，沒東西可以翻譯。',
+    translatedToEn:'已自動翻譯成英文（機器翻譯，品質普通），如果你的筆記想用別的語言，請自行編輯。',
+    translateFailed:'自動翻譯失敗（可能是網路問題或翻譯服務暫時不可用），可以手動輸入。',
+    selectFileFirst:'請先選擇檔案。',
+    noDataRows:'檔案裡沒有讀到資料列。',
+    noValidRows:'沒有解析到任何有效資料列（略過 {n} 列），確認欄位名稱是不是「日期、漢字、拼音、筆記」。',
+    parseComplete:'解析完成，共 {days} 天、略過 {skipped} 列空白或格式錯誤的列。確認沒問題後按下方「確認匯入」。',
+    sentCount:'共 {n} 句',
+    willOverwrite:'將覆蓋既有內容', newDate:'新日期',
+    fileReadFail:'檔案讀取失敗，確認是不是正確的 Excel/CSV 檔案。',
+    parseFirst:'請先解析檔案。',
+    savingEllipsis:'儲存中…',
+    importComplete:'匯入完成，共 {days} 天。',
+    noHanziYet:'（尚未填寫漢字）', noNotesYet:'（尚未填寫筆記）',
+    micCompare:'🎤 口說比對', showHanzi:'顯示漢字 →',
+    noContentUpload:'{date}（{lang}）還沒有上傳內容。<br>先到「新增內容」上傳吧。',
+    noContentPractice:'{date}（{lang}）還沒有上傳內容，沒有東西可以練習。',
+    sentCountLabel:'共 {n} 句',
+    aiReadBlind:'▶ AI 朗讀外文（盲聽）', stopBtn:'■ 停止',
+    rateSlow:'慢速 0.7x', rateNormal:'正常 0.9x', rate10:'1.0x', rateFast:'快 1.15x',
+    noVoiceFound:'（系統沒有中文的聲音，見下方說明）', onlineVoice:'（線上）',
+    revealCompare:'聽完了，顯示文字對照 →',
+    practiceNotesLine:'看筆記，練習說出中文',
+    reviewStat:'今天（第 {n} 次練習 {lang}）剩 {due} 個日期待複習',
+    reviewEmpty:'今天沒有排到需要複習的日期（或都複習完了）。',
+    toggleCompare:'雙語對照', toggleNotesOnly:'只看筆記（練習）',
+    expandCollapse:'展開 / 收合',
+    aiRead:'▶ AI 朗讀', doneToday:'✓ 今天複習完成', masterForever:'✓✓ 已熟記，永久移出',
+    strokeClose:'✕ 關閉', strokeReplay:'▶ 重播筆順',
+    strokeNotFound:'找不到這個字的筆順資料（可能是罕見字或網路問題）。',
+    saidLabel:'你說的：', compareLabel:'對照：',
+    scoreLabel:'相符度 {score}%（紅字底線＝沒對到的地方）',
+    recognizeFail:'辨識失敗（{err}），可以再試一次，或按「顯示外文」自行核對。',
+    ttsUnsupported:'這個瀏覽器不支援語音朗讀，請改用貼音檔連結。',
+    micUnsupported:'這個瀏覽器不支援語音辨識，建議用電腦版或 Android 的 Chrome / Edge（iPhone Safari 目前不支援這個功能）。',
+    noHanziToRead:'這天還沒有填漢字內容，沒東西可以朗讀。',
+    signedInAs:'已登入：{email}',
+    enterEmailPwMin6:'請輸入 Email，密碼至少 6 碼', signingUp:'註冊中…', signUpFailed:'註冊失敗：{err}',
+    enterEmailPassword:'請輸入 Email 和密碼', signingIn:'登入中…', signInFailed:'登入失敗：{err}',
+    pleaseSignIn:'請先登入', notConnected:'未連線', loadingEllipsis:'讀取中…',
+    signedInSynced:'已登入：{email}（已同步 ✓）', loadFailed:'讀取失敗，檢查網路/Firestore 規則',
+    notSignedInNotSaved:'未登入，未儲存', saveFailed:'儲存失敗，檢查網路/Firestore 規則',
+    gapLabel:'間隔 {gap} 次',
+    recordingEllipsis:'🎙️ 錄音中…',
+    translatingEllipsis:'翻譯中…',
+  },
+  en: {
+    loginBtn:'Log in', logoutBtn:'Log out', notSignedIn:'Not signed in',
+    tabUpload:'Add Content', tabMorning:'Morning・Listen', tabEvening:'Evening・Practice', tabReview:'Review',
+    labelDate:'Date', labelHanzi:'Chinese Text', labelPinyin:'Pinyin', labelNotes:'Notes / Translation', labelAudio:'Audio Link', labelBatch:'Batch Import',
+    phPassword:'Password', phHanzi:'今天天氣很好。\n我們去公園散步吧。', phPinyin:'Click "Generate Pinyin" above, or type your own', phNotes:"The weather is very nice today.\nLet's go for a walk in the park.",
+    btnAutoTranslate:'→ Auto-translate to English notes', btnGenPinyin:'→ Generate Pinyin', btnSave:'Save',
+    batchHint:'Columns: <b>Date, Chinese, Pinyin (leave blank to auto-generate), Notes</b>. For multiple sentences on the same day, repeat the same date on several rows.',
+    btnDownloadTemplate:'Download template', btnParseBatch:'Parse file', btnConfirmImport:'Confirm import',
+    hidePinyin:'👁️ Hide Pinyin', showPinyin:'👁️ Show Pinyin',
+    langChinese:'Chinese',
+    loadedForEdit:'Loaded existing content for {date} ({lang}) — edit and save to overwrite.',
+    needOneField:'Please fill in at least Chinese text or notes.',
+    savedEntry:'Saved {date} ({lang}), {n} sentence(s) {note}',
+    lineMismatchNote:'(Chinese and notes have different numbers of lines; saved as-is aligned by position — a few lines may not line up, worth double-checking.)',
+    needHanziForPinyin:'Please enter Chinese text first.',
+    pinyinLibFail:'Pinyin library failed to load — check your network connection.',
+    pinyinGenerated:'Pinyin generated automatically. Characters with multiple readings (e.g. 行, 重, 了) are easy to get wrong — please check, and edit manually if needed.',
+    hanziFieldEmpty:'The Chinese field is empty — nothing to translate.',
+    translatedToEn:'Auto-translated to English (machine translation, rough quality). If your notes should be in another language, edit them yourself.',
+    translateFailed:'Auto-translate failed (network issue or the translation service may be temporarily unavailable) — you can type manually.',
+    selectFileFirst:'Please choose a file first.',
+    noDataRows:'No data rows were found in the file.',
+    noValidRows:'No valid rows were parsed ({n} skipped) — check that the column headers are Date, Chinese, Pinyin, Notes.',
+    parseComplete:'Parsed {days} day(s), skipped {skipped} blank/invalid row(s). Review below, then click "Confirm import".',
+    sentCount:'{n} sentence(s)',
+    willOverwrite:'Will overwrite existing content', newDate:'New date',
+    fileReadFail:'Failed to read the file — check that it is a valid Excel/CSV file.',
+    parseFirst:'Please parse a file first.',
+    savingEllipsis:'Saving…',
+    importComplete:'Import complete — {days} day(s).',
+    noHanziYet:'(No Chinese text yet)', noNotesYet:'(No notes yet)',
+    micCompare:'🎤 Voice check', showHanzi:'Show Chinese →',
+    noContentUpload:'No content uploaded yet for {date} ({lang}).<br>Go to "Add Content" to upload.',
+    noContentPractice:'No content uploaded yet for {date} ({lang}) — nothing to practice.',
+    sentCountLabel:'{n} sentence(s)',
+    aiReadBlind:'▶ AI read-aloud (blind listen)', stopBtn:'■ Stop',
+    rateSlow:'Slow 0.7x', rateNormal:'Normal 0.9x', rate10:'1.0x', rateFast:'Fast 1.15x',
+    noVoiceFound:'(No Chinese voice on this system — see note below)', onlineVoice:'(online)',
+    revealCompare:'Done listening — show text →',
+    practiceNotesLine:'Read the notes, practice saying it in Chinese',
+    reviewStat:'Today (session #{n} for {lang}) — {due} day(s) left to review',
+    reviewEmpty:'Nothing due for review today (or you\'ve finished).',
+    toggleCompare:'Side by side', toggleNotesOnly:'Notes only (practice)',
+    expandCollapse:'Expand / collapse',
+    aiRead:'▶ AI read-aloud', doneToday:'✓ Done for today', masterForever:'✓✓ Mastered — remove permanently',
+    strokeClose:'✕ Close', strokeReplay:'▶ Replay stroke order',
+    strokeNotFound:'Stroke-order data not found for this character (may be rare or a network issue).',
+    saidLabel:'You said: ', compareLabel:'Target: ',
+    scoreLabel:'Match {score}% (red underline = missed)',
+    recognizeFail:'Recognition failed ({err}) — try again, or use "Show Chinese" to check yourself.',
+    ttsUnsupported:'This browser does not support speech synthesis — use an audio link instead.',
+    micUnsupported:'This browser does not support speech recognition — use Chrome or Edge on desktop or Android (iOS Safari does not support this feature).',
+    noHanziToRead:'No Chinese text entered for this day — nothing to read aloud.',
+    signedInAs:'Signed in: {email}',
+    enterEmailPwMin6:'Enter an email and a password of at least 6 characters', signingUp:'Signing up…', signUpFailed:'Sign-up failed: {err}',
+    enterEmailPassword:'Enter your email and password', signingIn:'Signing in…', signInFailed:'Sign-in failed: {err}',
+    pleaseSignIn:'Please sign in', notConnected:'Not connected', loadingEllipsis:'Loading…',
+    signedInSynced:'Signed in: {email} (synced ✓)', loadFailed:'Failed to load — check your network/Firestore rules',
+    notSignedInNotSaved:'Not signed in — not saved', saveFailed:'Failed to save — check your network/Firestore rules',
+    gapLabel:'Interval {gap}',
+    recordingEllipsis:'🎙️ Recording…',
+    translatingEllipsis:'Translating…',
+  }
+};
+function t(key, vars){
+  let s = (STR[uiLang] && STR[uiLang][key] !== undefined) ? STR[uiLang][key] : (STR.zh[key] !== undefined ? STR.zh[key] : key);
+  if(vars){ Object.keys(vars).forEach(k=>{ s = s.split('{'+k+'}').join(vars[k]); }); }
+  return s;
+}
+function applyStaticI18n(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{ el.textContent = t(el.getAttribute('data-i18n')); });
+  document.querySelectorAll('[data-i18n-html]').forEach(el=>{ el.innerHTML = t(el.getAttribute('data-i18n-html')); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el=>{ el.setAttribute('placeholder', t(el.getAttribute('data-i18n-ph'))); });
+  const langBtn = document.getElementById('lang-toggle-btn');
+  if(langBtn) langBtn.textContent = uiLang==='zh' ? 'EN' : '中文';
+  const pyBtn = document.getElementById('pinyin-toggle-btn');
+  if(pyBtn) pyBtn.textContent = document.body.classList.contains('hide-pinyin') ? t('showPinyin') : t('hidePinyin');
+  const statusEl = document.getElementById('sync-status');
+  if(statusEl && !currentUser) statusEl.textContent = t('notSignedIn');
+}
+function setUILang(lang){
+  uiLang = lang;
+  localStorage.setItem('uiLang', lang);
+  applyStaticI18n();
+  loadForEdit();
+  renderAll();
+}
+// ================================================================================
+
+let db = null;
+let auth = null;
+let currentUser = null;
+
+function initFirebase(){
+  try{
+    if(firebaseConfig.apiKey === "YOUR_API_KEY"){
+      setSyncStatus('尚未設定 Firebase（請編輯檔案內的 firebaseConfig）', 'err');
+      return false;
+    }
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    auth = firebase.auth();
+    return true;
+  }catch(e){
+    console.error(e);
+    setSyncStatus('Firebase 初始化失敗', 'err');
+    return false;
+  }
+}
+function setSyncStatus(text, cls){
+  const el = document.getElementById('sync-status');
+  if(el){ el.textContent = text; el.className = 'sync-status' + (cls ? ' '+cls : ''); }
+}
+function setSignedInStatus(text, cls){
+  const el = document.getElementById('signed-in-status');
+  if(el){ el.textContent = text; el.className = 'sync-status' + (cls ? ' '+cls : ''); }
+}
+function showAuthUI(signedIn, emailForDisplay){
+  document.getElementById('login-box').style.display = signedIn ? 'none' : 'block';
+  document.getElementById('signed-in-box').style.display = signedIn ? 'block' : 'none';
+  if(signedIn) setSignedInStatus(t('signedInAs', {email: emailForDisplay}), 'ok');
+}
+async function doSignUp(){
+  const email = document.getElementById('auth-email').value.trim();
+  const pw = document.getElementById('auth-password').value;
+  if(!email || pw.length < 6){ setSyncStatus(t('enterEmailPwMin6'), 'err'); return; }
+  try{
+    setSyncStatus(t('signingUp'));
+    await auth.createUserWithEmailAndPassword(email, pw);
+  }catch(e){
+    console.error(e);
+    setSyncStatus(t('signUpFailed', {err: e.message || e.code}), 'err');
+  }
+}
+async function doSignIn(){
+  const email = document.getElementById('auth-email').value.trim();
+  const pw = document.getElementById('auth-password').value;
+  if(!email || !pw){ setSyncStatus(t('enterEmailPassword'), 'err'); return; }
+  try{
+    setSyncStatus(t('signingIn'));
+    await auth.signInWithEmailAndPassword(email, pw);
+  }catch(e){
+    console.error(e);
+    setSyncStatus(t('signInFailed', {err: e.message || e.code}), 'err');
+  }
+}
+async function doSignOut(){
+  await auth.signOut();
+}
+async function onAuthChanged(user){
+  currentUser = user;
+  if(user){
+    showAuthUI(true, user.email);
+    await loadEntries();
+    todayLang = langForDate(selectedDate);
+    updateLangButtons();
+    loadForEdit();
+    renderAll();
+  }else{
+    showAuthUI(false);
+    entries = [];
+    renderAll();
+  }
+}
+
+// ===== AI 朗讀（瀏覽器內建 Web Speech API，免費、不需連 Firebase 以外的任何服務）=====
+if('speechSynthesis' in window){
+  speechSynthesis.onvoiceschanged = ()=>{ populateVoiceSelect(todayLang); };
+}
+function langTag(lang){ return 'zh-TW'; }
+function pickVoice(lang){
+  if(!('speechSynthesis' in window)) return null;
+  const voices = speechSynthesis.getVoices();
+  return voices.find(v=>v.lang.toLowerCase().startsWith('zh')) || null;
+}
+function populateVoiceSelect(lang){
+  const sel = document.getElementById('tts-voice');
+  if(!sel || !('speechSynthesis' in window)) return;
+  const voices = speechSynthesis.getVoices().filter(v=>v.lang.toLowerCase().startsWith('zh'));
+  sel._voices = voices;
+  sel.dataset.lang = 'zh';
+  sel.innerHTML = voices.length
+    ? voices.map((v,i)=>`<option value="${i}">${escapeHtml(v.name)}${v.localService?'':t('onlineVoice')}</option>`).join('')
+    : `<option value="">${t('noVoiceFound')}</option>`;
+}
+function currentVoice(lang){
+  const sel = document.getElementById('tts-voice');
+  if(sel && sel.dataset.lang===lang && sel._voices && sel._voices.length){
+    const idx = parseInt(sel.value,10);
+    if(!isNaN(idx) && sel._voices[idx]) return sel._voices[idx];
+  }
+  return pickVoice(lang);
+}
+function currentRate(){
+  const el = document.getElementById('tts-rate');
+  return el ? parseFloat(el.value) : 0.9;
+}
+function speakOne(text, lang){
+  if(!('speechSynthesis' in window)){ alert(t('ttsUnsupported')); return; }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = langTag(lang);
+  const v = currentVoice(lang);
+  if(v) u.voice = v;
+  u.rate = currentRate();
+  speechSynthesis.speak(u);
+}
+function speakSentences(sentences, lang){
+  if(!('speechSynthesis' in window)){ alert(t('ttsUnsupported')); return; }
+  speechSynthesis.cancel();
+  const v = currentVoice(lang);
+  sentences.forEach(s=>{
+    const u = new SpeechSynthesisUtterance(s);
+    u.lang = langTag(lang);
+    if(v) u.voice = v;
+    u.rate = currentRate();
+    speechSynthesis.speak(u);
+  });
+}
+function speakEntry(date, lang){
+  const e = entries.find(x=>x.date===date && x.language===lang);
+  if(!e) return;
+  const nonEmpty = e.foreign.filter(s=>s && s.trim());
+  if(nonEmpty.length===0){ alert(t('noHanziToRead')); return; }
+  speakSentences(nonEmpty, lang);
+}
+function speakSentenceText(btn){
+  speakOne(btn.dataset.text, btn.dataset.lang);
+}
+function stopSpeaking(){
+  if('speechSynthesis' in window) speechSynthesis.cancel();
+}
+function escapeAttr(s){
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ===== 口說錄音比對（瀏覽器內建語音辨識，Chrome/Edge 支援較好，iOS Safari 不支援）=====
+function stripPunct(s){ return s.replace(/[.,!?¡¿;:"'()\-，。！？、「」『』；：（）"“”]/g,''); }
+function tokenize(text){
+  // 中文沒有空白分詞，改成逐字比對
+  return Array.from(stripPunct(text)).filter(ch=>ch.trim());
+}
+function diffAgainstTarget(targetText, saidText){
+  const aDisplay = tokenize(targetText);
+  const aLower = aDisplay.map(w=>w.toLowerCase());
+  const bLower = tokenize(saidText).map(w=>w.toLowerCase());
+  const m = aLower.length, n = bLower.length;
+  // 逐字往前找配對（誰先出現就先配對），比原本用平手時容易誤判的 DP 演算法更直觀、更不會誤傷開頭的字
+  const matched = new Array(m).fill(false);
+  let bPos = 0;
+  for(let i=0; i<m; i++){
+    let found = -1;
+    for(let k=bPos; k<n; k++){
+      if(bLower[k]===aLower[i]){ found = k; break; }
+    }
+    if(found !== -1){ matched[i] = true; bPos = found + 1; }
+  }
+  const lcs = matched.filter(Boolean).length;
+  const score = (m+n)===0 ? 100 : Math.round(200*lcs/(m+n));
+  return {aDisplay, matched, score};
+}
+function startRecognition(btn){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ alert(t('micUnsupported')); return; }
+  const target = btn.dataset.target;
+  const lang = btn.dataset.lang;
+  const row = btn.closest('.sentence-row');
+  const resultEl = row ? row.querySelector('.mic-result') : null;
+  const rec = new SR();
+  rec.lang = langTag(lang);
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+  const origText = btn.textContent;
+  btn.textContent = t('recordingEllipsis');
+  btn.disabled = true;
+  rec.onresult = (e)=>{
+    const said = e.results[0][0].transcript;
+    const {aDisplay, matched, score} = diffAgainstTarget(target, said);
+    const html = aDisplay.map((w,i)=> matched[i] ? `<span>${escapeHtml(w)}</span>` : `<span class="miss">${escapeHtml(w)}</span>`).join('');
+    if(resultEl){
+      resultEl.style.display = 'block';
+      resultEl.innerHTML = `<div class="said">${t('saidLabel')}${escapeHtml(said)}</div><div class="diffline">${t('compareLabel')}${html}</div><div class="score">${t('scoreLabel', {score})}</div>`;
+    }
+  };
+  rec.onerror = (e)=>{
+    if(resultEl){
+      resultEl.style.display = 'block';
+      resultEl.innerHTML = `<div class="score" style="color:var(--pl);">${t('recognizeFail', {err: e.error})}</div>`;
+    }
+  };
+  rec.onend = ()=>{ btn.textContent = origText; btn.disabled = false; };
+  try{ rec.start(); }catch(err){ btn.textContent = origText; btn.disabled = false; }
+}
+
+const TIERS = [1,2,4,7,15,30,60]; // interval in "same-language sessions"
+let entries = [];
+function getLocalDateStr(d){ return (d||new Date()).toLocaleDateString('en-CA'); } // 用本機時區的日期，而不是 UTC
+let todayStr = getLocalDateStr();
+let selectedDate = todayStr;
+let todayLang = 'zh'; // single language mode: always Chinese
+
+function fmtDate(d){
+  const dt = new Date(d+'T00:00:00');
+  return `${dt.getMonth()+1}/${dt.getDate()}`;
+}
+function daysBetween(d1, d2){
+  const a = new Date(d1+'T00:00:00');
+  const b = new Date(d2+'T00:00:00');
+  return Math.round((b-a)/86400000);
+}
+// 單一語言模式：每天都是中文，不需要交替判斷
+function langForDate(date){
+  return 'zh';
+}
+
+async function loadEntries(){
+  if(!db || !currentUser){ entries = []; setSyncStatus(db ? t('pleaseSignIn') : t('notConnected'), 'err'); return; }
+  try{
+    setSignedInStatus(t('loadingEllipsis'));
+    const doc = await db.collection('journals').doc(currentUser.uid).get();
+    entries = doc.exists && doc.data().payload ? JSON.parse(doc.data().payload) : [];
+    setSignedInStatus(t('signedInSynced', {email: currentUser.email}), 'ok');
+  }catch(e){
+    console.error('firestore load error', e);
+    entries = [];
+    setSignedInStatus(t('loadFailed'), 'err');
+  }
+}
+async function persistEntries(){
+  if(!db || !currentUser){ setSyncStatus(t('notSignedInNotSaved'), 'err'); return; }
+  try{
+    setSignedInStatus(t('savingEllipsis'));
+    await db.collection('journals').doc(currentUser.uid).set({payload: JSON.stringify(entries), updatedAt: Date.now()});
+    setSignedInStatus(t('signedInSynced', {email: currentUser.email}), 'ok');
+  }catch(e){
+    console.error('firestore save error', e);
+    setSignedInStatus(t('saveFailed'), 'err');
+  }
+}
+
+function entriesFor(lang){
+  return entries.filter(e=>e.language===lang).sort((a,b)=>a.date.localeCompare(b.date));
+}
+function sessionIndexOf(lang, date){
+  const list = entriesFor(lang);
+  const i = list.findIndex(e=>e.date===date);
+  return i===-1 ? null : i+1;
+}
+function todaysSessionNumber(lang){
+  const list = entriesFor(lang);
+  const hasToday = list.some(e=>e.date===todayStr);
+  return hasToday ? sessionIndexOf(lang, todayStr) : list.length+1;
+}
+function dueEntries(lang){
+  const todaySess = todaysSessionNumber(lang);
+  return entriesFor(lang)
+    .filter(e=>!e.mastered && e.date!==todayStr)
+    .map(e=>({entry:e, gap: todaySess - sessionIndexOf(lang,e.date)}))
+    .filter(x=>TIERS.includes(x.gap));
+}
+
+function updateLangButtons(){
+  document.documentElement.style.setProperty('--current-accent', 'var(--es)');
+}
+
+function onDateChange(){
+  selectedDate = document.getElementById('in-date').value || todayStr;
+  todayLang = 'zh';
+  updateLangButtons();
+  loadForEdit();
+  renderAll();
+}
+
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.panel===name));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active', p.id==='panel-'+name));
+  document.body.classList.toggle('evening', name==='evening');
+  renderAll();
+}
+
+function computeArr(text){
+  return text.trim() ? text.trim().split('\n').map(s=>s.trim()).filter(Boolean) : [];
+}
+
+// ===== 拼音產生（用 pinyin-pro 真正查字典，不是 AI 猜；多音字用分詞盡量抓對，但仍可能猜錯，務必自行檢查）=====
+function pinyinArrayForLine(line){
+  try{
+    const arr = pinyinPro.pinyin(line, { type: 'array', toneType: 'symbol' });
+    const chars = Array.from(line);
+    if(Array.isArray(arr) && arr.length === chars.length) return arr;
+    return chars.map((_,i)=> (arr && arr[i]) || '');
+  }catch(e){
+    console.error('pinyin error', e);
+    return null;
+  }
+}
+function generatePinyinDraft(){
+  const foreignLines = computeArr(document.getElementById('in-foreign').value);
+  const msg = document.getElementById('pinyin-msg');
+  if(foreignLines.length===0){ msg.textContent = t('needHanziForPinyin'); return; }
+  if(typeof pinyinPro === 'undefined'){ msg.textContent = t('pinyinLibFail'); return; }
+  const out = foreignLines.map(line=>{
+    const arr = pinyinArrayForLine(line);
+    return arr ? arr.join(' ') : '';
+  });
+  document.getElementById('in-pinyin').value = out.join('\n');
+  msg.textContent = t('pinyinGenerated');
+}
+
+// ===== 批次匯入（Excel / CSV，一次帶入好幾天）=====
+function downloadBatchTemplate(){
+  const rows = [
+    ['日期','漢字','拼音','筆記'],
+    ['2026-09-20','今天天氣很好。','','The weather is very nice today.'],
+    ['2026-09-20','我們去公園散步吧。','','Let\'s go for a walk in the park.'],
+    ['2026-09-21','你叫什麼名字？','','What is your name?']
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '課程內容');
+  XLSX.writeFile(wb, 'languaboost-範本.xlsx');
+}
+
+let batchGroups = null; // 暫存解析結果，等使用者按「確認匯入」才真的寫入
+
+function excelDateToStr(v){
+  if(v instanceof Date) return getLocalDateStr(v);
+  const s = String(v).trim();
+  // 嘗試辨識常見日期格式，統一成 YYYY-MM-DD
+  const m = s.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+  if(m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  return s;
+}
+
+function parseBatchFile(){
+  const fileInput = document.getElementById('batch-file');
+  const msg = document.getElementById('batch-msg');
+  const preview = document.getElementById('batch-preview');
+  preview.innerHTML = '';
+  batchGroups = null;
+  if(!fileInput.files || fileInput.files.length===0){ msg.textContent = t('selectFileFirst'); return; }
+  const file = fileInput.files[0];
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array', cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      if(rows.length===0){ msg.textContent = t('noDataRows'); return; }
+
+      const groups = {}; // date -> {foreign:[],pinyin:[],zh:[]}
+      let skipped = 0;
+      rows.forEach(row=>{
+        const dateRaw = row['日期'] ?? row['date'] ?? row['Date'];
+        const hanzi = String(row['漢字'] ?? row['hanzi'] ?? '').trim();
+        const pinyinRaw = String(row['拼音'] ?? row['pinyin'] ?? '').trim();
+        const notes = String(row['筆記'] ?? row['notes'] ?? '').trim();
+        if(!dateRaw || (!hanzi && !notes)){ skipped++; return; }
+        const dateStr = excelDateToStr(dateRaw);
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)){ skipped++; return; }
+        if(!groups[dateStr]) groups[dateStr] = { foreign: [], pinyin: [], zh: [] };
+        let py = null;
+        if(pinyinRaw){
+          py = pinyinRaw.split(/\s+/).filter(Boolean);
+        }else if(hanzi){
+          py = pinyinArrayForLine(hanzi);
+        }
+        groups[dateStr].foreign.push(hanzi);
+        groups[dateStr].zh.push(notes);
+        groups[dateStr].pinyin.push(py || []);
+      });
+
+      const dates = Object.keys(groups).sort();
+      if(dates.length===0){ msg.textContent = t('noValidRows', {n: skipped}); return; }
+
+      batchGroups = groups;
+      msg.textContent = t('parseComplete', {days: dates.length, skipped});
+      preview.innerHTML = dates.map(d=>{
+        const existing = entries.some(e=>e.date===d && e.language===todayLang);
+        return `<div class="batch-row ${existing?'overwrite':''}">
+          <span>${d}　${t('sentCount', {n: groups[d].foreign.length})}</span>
+          <span class="batch-tag ${existing?'overwrite':''}">${existing?t('willOverwrite'):t('newDate')}</span>
+        </div>`;
+      }).join('') + `<button class="btn" style="margin-top:10px;" onclick="confirmBatchImport()">${t('btnConfirmImport')}</button>`;
+    }catch(err){
+      console.error('batch parse error', err);
+      msg.textContent = t('fileReadFail');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function confirmBatchImport(){
+  const msg = document.getElementById('batch-msg');
+  if(!batchGroups){ msg.textContent = t('parseFirst'); return; }
+  const dates = Object.keys(batchGroups);
+  dates.forEach(d=>{
+    const g = batchGroups[d];
+    entries = entries.filter(e=>!(e.date===d && e.language===todayLang));
+    entries.push({ date: d, language: todayLang, foreign: g.foreign, zh: g.zh, pinyin: g.pinyin, audioUrl: '', mastered: false });
+  });
+  msg.textContent = t('savingEllipsis');
+  await persistEntries();
+  msg.textContent = t('importComplete', {days: dates.length});
+  document.getElementById('batch-preview').innerHTML = '';
+  batchGroups = null;
+  document.getElementById('batch-file').value = '';
+  loadForEdit();
+  renderAll();
+}
+
+// ===== 自動翻譯（免費、免申請金鑰的 MyMemory API；品質普通，翻完務必自行檢查/編輯）=====
+async function translateOneLine(text, langpair){
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langpair}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  return (data && data.responseData && data.responseData.translatedText) ? data.responseData.translatedText : '';
+}
+async function autoTranslate(direction, btn){
+  const foreignEl = document.getElementById('in-foreign');
+  const zhEl = document.getElementById('in-zh');
+  const msg = document.getElementById('upload-msg');
+  const origText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = t('translatingEllipsis');
+  try{
+    const lines = computeArr(foreignEl.value);
+    if(lines.length===0){ msg.textContent = t('hanziFieldEmpty'); return; }
+    const out = [];
+    for(const line of lines){ out.push(await translateOneLine(line, 'zh-TW|en')); }
+    zhEl.value = out.join('\n');
+    msg.textContent = t('translatedToEn');
+  }catch(e){
+    console.error('translate error', e);
+    msg.textContent = t('translateFailed');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = origText;
+  }
+}
+
+function loadForEdit(){
+  const date = selectedDate;
+  const entry = entries.find(e=>e.date===date && e.language===todayLang);
+  const hint = document.getElementById('edit-hint');
+  if(entry){
+    document.getElementById('in-foreign').value = entry.foreign.join('\n');
+    document.getElementById('in-zh').value = entry.zh.join('\n');
+    document.getElementById('in-pinyin').value = (entry.pinyin || []).map(arr => Array.isArray(arr) ? arr.join(' ') : (arr||'')).join('\n');
+    document.getElementById('in-audio').value = entry.audioUrl || '';
+    hint.style.display = 'block';
+    hint.textContent = t('loadedForEdit', {date, lang: t('langChinese')});
+  }else{
+    document.getElementById('in-foreign').value = '';
+    document.getElementById('in-zh').value = '';
+    document.getElementById('in-pinyin').value = '';
+    document.getElementById('in-audio').value = '';
+    hint.style.display = 'none';
+  }
+}
+
+async function saveEntry(){
+  const date = selectedDate;
+  const fxRaw = document.getElementById('in-foreign').value;
+  const zhRaw = document.getElementById('in-zh').value;
+  const pyRaw = document.getElementById('in-pinyin').value;
+  const audio = document.getElementById('in-audio').value.trim();
+  const msg = document.getElementById('upload-msg');
+  const fxArr = computeArr(fxRaw);
+  const zhArr = computeArr(zhRaw);
+  const pyLines = pyRaw.split('\n');
+  if(fxArr.length===0 && zhArr.length===0){
+    msg.textContent = t('needOneField');
+    return;
+  }
+  const len = Math.max(fxArr.length, zhArr.length);
+  const fx = Array.from({length: len}, (_, i) => fxArr[i] || '');
+  const zh = Array.from({length: len}, (_, i) => zhArr[i] || '');
+  // 拼音：每行用空白分出每個字的音，跟該行漢字字數比對，對不上就不強行套用（顯示時會自動退回不標拼音）
+  const pinyinField = Array.from({length: len}, (_, i) => {
+    const line = (pyLines[i] || '').trim();
+    if(!line) return null;
+    const syll = line.split(/\s+/).filter(Boolean);
+    return syll;
+  });
+  entries = entries.filter(e=>!(e.date===date && e.language===todayLang));
+  entries.push({date, language: todayLang, foreign: fx, zh: zh, pinyin: pinyinField, audioUrl: audio, mastered:false});
+  await persistEntries();
+  const note = fxArr.length !== zhArr.length ? t('lineMismatchNote') : '';
+  msg.textContent = t('savedEntry', {date, lang: t('langChinese'), n: len, note});
+  loadForEdit();
+  renderAll();
+}
+
+function togglePinyinDisplay(){
+  const hidden = document.body.classList.toggle('hide-pinyin');
+  document.getElementById('pinyin-toggle-btn').textContent = hidden ? t('showPinyin') : t('hidePinyin');
+}
+
+// ===== 筆順彈窗（用開源 Hanzi Writer 套件，動畫在原本畫面上顯示，不跳轉網站）=====
+let strokeWriterInstance = null;
+function showStrokeOrder(char){
+  const modal = document.getElementById('stroke-modal');
+  const target = document.getElementById('stroke-target');
+  document.getElementById('stroke-modal-char').textContent = char;
+  target.innerHTML = '';
+  modal.style.display = 'flex';
+  try{
+    strokeWriterInstance = HanziWriter.create(target, char, {
+      width: 220,
+      height: 220,
+      padding: 10,
+      showOutline: true,
+      strokeAnimationSpeed: 1,
+      delayBetweenStrokes: 300,
+      strokeColor: '#22303A'
+    });
+    strokeWriterInstance.animateCharacter();
+  }catch(e){
+    console.error('hanzi writer error', e);
+    target.innerHTML = `<div class="hint">${t('strokeNotFound')}</div>`;
+  }
+}
+function replayStroke(){
+  if(strokeWriterInstance) strokeWriterInstance.animateCharacter();
+}
+function closeStrokeModal(){
+  document.getElementById('stroke-modal').style.display = 'none';
+}
+
+function wrapHanzi(text, pinyinArr){
+  const chars = Array.from(text);
+  const usePinyin = Array.isArray(pinyinArr) && pinyinArr.length === chars.length;
+  return chars.map((ch,i)=>{
+    if(/[\u4e00-\u9fff]/.test(ch)){
+      const rt = usePinyin && pinyinArr[i] ? `<rt>${escapeHtml(pinyinArr[i])}</rt>` : '';
+      const tag = rt ? 'ruby' : 'span';
+      return `<${tag} class="hanzi-char" onclick="showStrokeOrder('${ch}')">${ch}${rt}</${tag}>`;
+    }
+    return escapeHtml(ch);
+  }).join('');
+}
+
+function sentenceBlock(entry, opts){
+  const {compareMode=true} = opts||{};
+  return entry.foreign.map((f,i)=>{
+    const zh = entry.zh[i];
+    const py = (entry.pinyin || [])[i];
+    const fDisplay = f || t('noHanziYet');
+    const zhDisplay = zh || t('noNotesYet');
+    const revealId = `rv_${entry.date}_${entry.language}_${i}`.replace(/[^a-zA-Z0-9_]/g,'');
+    const spkBtn = f ? `<button class="spk-btn" data-text="${escapeAttr(f)}" data-lang="${entry.language}" onclick="speakSentenceText(this)">🔊</button>` : '';
+    if(compareMode){
+      return `<div class="sentence-row"><div class="fx">${wrapHanzi(fDisplay, f ? py : null)}${spkBtn}</div><div class="zh">${escapeHtml(zhDisplay)}</div></div>`;
+    }
+    const micBtn = f ? `<button class="spk-btn" data-target="${escapeAttr(f)}" data-lang="${entry.language}" onclick="startRecognition(this)">${t('micCompare')}</button>` : '';
+    return `<div class="sentence-row">
+      <div class="zh">${escapeHtml(zhDisplay)}</div>
+      <div class="row-actions">
+        <button class="reveal-btn" onclick="document.getElementById('${revealId}').style.display='block'; this.style.display='none';">${t('showHanzi')}</button>
+        ${micBtn}
+      </div>
+      <div id="${revealId}" style="display:none" class="fx">${wrapHanzi(fDisplay, f ? py : null)}${spkBtn}</div>
+      <div class="mic-result"></div>
+    </div>`;
+  }).join('');
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function renderMorning(){
+  const el = document.getElementById('morning-content');
+  const entry = entries.find(e=>e.date===selectedDate && e.language===todayLang);
+  if(!entry){
+    el.innerHTML = `<div class="empty">${t('noContentUpload', {date: selectedDate, lang: t('langChinese')})}</div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div class="stat-line">${selectedDate} · ${t('langChinese')} · ${t('sentCountLabel', {n: entry.foreign.length})}</div>
+    ${entry.audioUrl ? `<audio controls src="${escapeHtml(entry.audioUrl)}"></audio>` : ``}
+    <div class="tts-row">
+      <button class="btn ghost small" onclick="speakEntry('${entry.date}','${entry.language}')">${t('aiReadBlind')}</button>
+      <button class="btn ghost small" onclick="stopSpeaking()">${t('stopBtn')}</button>
+      <select id="tts-rate">
+        <option value="0.7">${t('rateSlow')}</option>
+        <option value="0.9" selected>${t('rateNormal')}</option>
+        <option value="1.0">${t('rate10')}</option>
+        <option value="1.15">${t('rateFast')}</option>
+      </select>
+      <select id="tts-voice"></select>
+    </div>
+    <button class="btn ghost" id="reveal-morning-btn" onclick="document.getElementById('morning-text').style.display='block'; this.style.display='none';" style="margin-top:14px;">${t('revealCompare')}</button>
+    <div id="morning-text" style="display:none; margin-top:10px;">
+      ${sentenceBlock(entry, {compareMode:true})}
+    </div>
+  `;
+  populateVoiceSelect(todayLang);
+}
+
+function renderEvening(){
+  const el = document.getElementById('evening-content');
+  const entry = entries.find(e=>e.date===selectedDate && e.language===todayLang);
+  if(!entry){
+    el.innerHTML = `<div class="empty">${t('noContentPractice', {date: selectedDate, lang: t('langChinese')})}</div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div class="stat-line">${selectedDate} · ${t('langChinese')} · ${t('practiceNotesLine')}</div>
+    ${sentenceBlock(entry, {compareMode:false})}
+  `;
+}
+
+let doneToday = new Set();
+try{ doneToday = new Set(JSON.parse(localStorage.getItem('doneToday_'+todayStr) || '[]')); }catch(e){}
+function markDoneToday(date, lang){
+  doneToday.add(date+'|'+lang);
+  try{ localStorage.setItem('doneToday_'+todayStr, JSON.stringify([...doneToday])); }catch(e){}
+  renderReview();
+}
+
+function renderReview(){
+  const stat = document.getElementById('review-stat');
+  const list = document.getElementById('review-list');
+  const reviewLang = langForDate(todayStr);
+  const due = dueEntries(reviewLang)
+    .filter(x=>!doneToday.has(x.entry.date+'|'+x.entry.language))
+    .sort((a,b)=>a.entry.date.localeCompare(b.entry.date));
+  stat.textContent = t('reviewStat', {n: todaysSessionNumber(reviewLang), lang: t('langChinese'), due: due.length});
+  if(due.length===0){
+    list.innerHTML = `<div class="empty">${t('reviewEmpty')}</div>`;
+    return;
+  }
+  list.innerHTML = due.map(({entry,gap})=>{
+    return `
+    <div class="ticket" id="ticket-${entry.date}-${entry.language}">
+      <div class="ticket-main">
+        <div class="ticket-top">
+          <span class="ticket-lang-tag es">${t('langChinese')}</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);">${entry.date} · ${t('gapLabel', {gap})}</span>
+        </div>
+        <div class="toggle-row">
+          <button class="toggle-btn active" onclick="setTicketMode('${entry.date}','${entry.language}',true,this)">${t('toggleCompare')}</button>
+          <button class="toggle-btn" onclick="setTicketMode('${entry.date}','${entry.language}',false,this)">${t('toggleNotesOnly')}</button>
+        </div>
+        <button class="btn small ghost" onclick="toggleTicket('${entry.date}','${entry.language}')">${t('expandCollapse')}</button>
+        <div class="ticket-body" data-mode="compare">
+          ${sentenceBlock(entry,{compareMode:true})}
+        </div>
+        <div class="ticket-actions">
+          <button class="btn small ghost" onclick="speakEntry('${entry.date}','${entry.language}')">${t('aiRead')}</button>
+          <button class="btn small ghost" onclick="markDoneToday('${entry.date}','${entry.language}')">${t('doneToday')}</button>
+          <button class="btn small ghost" onclick="markMastered('${entry.date}','${entry.language}')">${t('masterForever')}</button>
+        </div>
+      </div>
+      <div class="ticket-stub">
+        <div class="ticket-date">${fmtDate(entry.date)}</div>
+        <div class="ticket-gap">gap ${gap}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleTicket(date, lang){
+  document.getElementById(`ticket-${date}-${lang}`).classList.toggle('open');
+}
+function setTicketMode(date, lang, compare, btn){
+  const ticket = document.getElementById(`ticket-${date}-${lang}`);
+  ticket.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const entry = entries.find(e=>e.date===date && e.language===lang);
+  const body = ticket.querySelector('.ticket-body');
+  body.innerHTML = sentenceBlock(entry, {compareMode: compare});
+  ticket.classList.add('open');
+}
+async function markMastered(date, lang){
+  const e = entries.find(e=>e.date===date && e.language===lang);
+  if(e){ e.mastered = true; await persistEntries(); renderReview(); }
+}
+
+function updateHeader(){
+  const headerLang = langForDate(todayStr);
+  document.getElementById('today-title').textContent = todayStr;
+  const badge = document.getElementById('today-lang-badge');
+  badge.textContent = t('langChinese');
+  badge.className = 'date-text lang-badge ' + headerLang;
+}
+
+function renderAll(){
+  updateHeader();
+  renderMorning();
+  renderEvening();
+  renderReview();
+}
+
+async function init(){
+  applyStaticI18n();
+  document.getElementById('in-date').value = selectedDate;
+  const ok = initFirebase();
+  if(ok){
+    auth.onAuthStateChanged(onAuthChanged);
+  }else{
+    showAuthUI(false);
+  }
+  todayLang = langForDate(selectedDate);
+  updateLangButtons();
+  loadForEdit();
+  renderAll();
+}
+init();
+</script>
+</body>
+</html>
